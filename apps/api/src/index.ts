@@ -78,20 +78,85 @@ app.post(
           ticks: true,
         },
       });
-    } catch (error) {}
+      res.status(200).json(data);
+      return;
+    } catch (error: Error | any) {
+      res.status(500).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Internal Server Error",
+      });
+      return;
+    }
   }
 );
 
 app.post(
   "/api/v1/websites",
   authMiddleware,
-  (req: Request, res: Response) => {}
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const data = await prisma.website.findMany({
+        where: {
+          userId,
+          disabled: false,
+        },
+      });
+      res.status(200).json(data);
+      return;
+    } catch (error: Error | any) {
+      res.status(500).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Internal Server Error",
+      });
+      return;
+    }
+  }
 );
 
 app.delete(
   "/api/v1/website",
   authMiddleware,
-  (req: Request, res: Response) => {}
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const parsedBody = websiteStatusSchema.safeParse(req.query);
+
+      if (!parsedBody.success) {
+        res.status(400).json({
+          success: false,
+          message: "Validation error",
+          errors: parsedBody.error.errors.map((err) => ({
+            field: err.path[0],
+            message: err.message,
+          })),
+        });
+        return;
+      }
+
+      const { websiteId } = parsedBody.data;
+      await prisma.website.update({
+        where: {
+          id: websiteId,
+          userId,
+        },
+        data: {
+          disabled: true,
+        },
+      });
+      res.status(200).json({ success: true });
+      return;
+    } catch (error: Error | any) {
+      res.status(500).json({
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Internal Server Error",
+      });
+      return;
+    }
+  }
 );
 
 app.listen(port, () => {
