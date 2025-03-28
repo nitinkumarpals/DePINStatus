@@ -11,6 +11,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -40,9 +41,10 @@ model WebsiteTick {
   createdAt     DateTime
   status        WebsiteStatus
   latency       Float  
-  website       Website   @relation(fields: [websiteId],references: [id])
-  validator     Validator @relation(fields: [validatorId],references: [id])
+  website       Website   @relation(fields: [websiteId],references: [id],onDelete: Cascade)
+  validator     Validator @relation(fields: [validatorId],references: [id],onDelete: Cascade)
 }
+
 enum WebsiteStatus{
   Good
   Bad
