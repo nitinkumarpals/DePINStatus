@@ -73,6 +73,7 @@ app.post(
         where: {
           id: websiteId,
           userId,
+          disabled: false,
         },
         include: {
           ticks: true,
