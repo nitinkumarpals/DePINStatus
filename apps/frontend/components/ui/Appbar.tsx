@@ -5,6 +5,7 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import { ModeToggle } from "../ModeToggle";
 
 export function Appbar() {
   return (
@@ -18,6 +19,7 @@ export function Appbar() {
           <SignInButton />
           <SignUpButton />
         </SignedOut>
+        <ModeToggle />
       </div>
     </div>
   );
