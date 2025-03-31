@@ -4,7 +4,6 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 
-import { Appbar } from "@/components/ui/Appbar";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -37,7 +36,6 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Appbar />
             {children}
           </ThemeProvider>
         </body>

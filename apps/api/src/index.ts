@@ -3,7 +3,7 @@ import { authMiddleware } from "./middlewares/auth.middleware";
 import { prisma } from "db/client";
 import { websiteSchema, websiteStatusSchema } from "schema/schema";
 const app = express();
-const port = 3000;
+const port = 8080;
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
@@ -102,6 +102,9 @@ app.post(
         where: {
           userId,
           disabled: false,
+        },
+        include:{
+          ticks: true
         },
       });
       res.status(200).json(data);
