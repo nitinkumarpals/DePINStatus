@@ -2,8 +2,14 @@ import express, { Request, Response } from "express";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import { prisma } from "db/client";
 import { websiteSchema, websiteStatusSchema } from "schema/schema";
+import cors from "cors"
 const app = express();
 const port = 8080;
+app.use(cors(
+  {
+    origin: "http://localhost:3000",
+  }
+))
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
@@ -92,7 +98,7 @@ app.post(
   }
 );
 
-app.post(
+app.get(
   "/api/v1/websites",
   authMiddleware,
   async (req: Request, res: Response) => {

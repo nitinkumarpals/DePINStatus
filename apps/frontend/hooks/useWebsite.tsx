@@ -35,5 +35,5 @@ export function useWebsite() {
     );
     return () => clearInterval(interval);
   }, []);
-  return websites;
+  return {websites, refreshWebsites};
 }

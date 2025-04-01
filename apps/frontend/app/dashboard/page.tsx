@@ -27,7 +27,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
 import { useWebsite } from "@/hooks/useWebsite";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_BACKEND_URL } from "@/config";
@@ -66,7 +72,7 @@ interface Tick {
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const websites = useWebsite();
+  const { websites, refreshWebsites } = useWebsite();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddingService, setIsAddingService] = useState(false);
   const [newWebsiteUrl, setNewWebsiteUrl] = useState("");
@@ -110,16 +116,18 @@ export default function DashboardPage() {
 
     try {
       const token = await getToken();
-      await axios.post(
-        `${API_BACKEND_URL}/api/v1/websites`,
-        { url: newWebsiteUrl },
-        {
-          headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      await axios
+        .post(
+          `${API_BACKEND_URL}/api/v1/website`,
+          { url: newWebsiteUrl },
+          {
+            headers: {
+              Authorization: token,
+              "Content-Type": "application/json",
+            },
+          }
+        )
+        .then(() => refreshWebsites());
 
       // Success - close modal and reset form
       setIsAddingService(false);
@@ -141,16 +149,16 @@ export default function DashboardPage() {
   };
 
   // Filter websites based on search query
-  const filteredWebsites = websites.filter((website) =>
+  const filteredWebsites = websites?.filter((website) =>
     website.url.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Calculate website status based on recent ticks
   const getWebsiteStatus = (website: Website): string => {
-    if (!website.ticks || website.ticks.length === 0) return "unknown";
+    if (!website.ticks || website.ticks?.length === 0) return "unknown";
 
     // Get the last 5 ticks to determine current status
-    const recentTicks = website.ticks.slice(0, 5);
+    const recentTicks = website.ticks?.slice(0, 5);
     const failedTicks = recentTicks.filter(
       (tick) => tick.status !== "up"
     ).length;
@@ -162,10 +170,10 @@ export default function DashboardPage() {
 
   // Calculate uptime percentage
   const calculateUptime = (website: Website): string => {
-    if (!website.ticks || website.ticks.length === 0) return "N/A";
+    if (!website.ticks || website.ticks?.length === 0) return "N/A";
 
-    const totalTicks = website.ticks.length;
-    const upTicks = website.ticks.filter((tick) => tick.status === "up").length;
+    const totalTicks = website.ticks?.length;
+    const upTicks = website.ticks?.filter((tick) => tick.status === "up").length;
 
     const uptimePercentage = (upTicks / totalTicks) * 100;
     return uptimePercentage.toFixed(2) + "%";
@@ -173,9 +181,9 @@ export default function DashboardPage() {
 
   // Get average response time
   const getAverageResponseTime = (website: Website): string => {
-    if (!website.ticks || website.ticks.length === 0) return "N/A";
+    if (!website.ticks || website.ticks?.length === 0) return "N/A";
 
-    const upTicks = website.ticks.filter((tick) => tick.status === "up");
+    const upTicks = website.ticks?.filter((tick) => tick.status === "up");
     if (upTicks.length === 0) return "Error";
 
     const totalLatency = upTicks.reduce(
@@ -187,7 +195,7 @@ export default function DashboardPage() {
 
   // Get the last 30 minutes of ticks (or all if less than 30)
   const getLast30MinutesTicks = (website: Website): boolean[] => {
-    if (!website.ticks || website.ticks.length === 0) return [];
+    if (!website.ticks || website.ticks?.length === 0) return [];
 
     // Sort ticks by createdAt in descending order (newest first)
     const sortedTicks = [...website.ticks].sort(
@@ -206,13 +214,13 @@ export default function DashboardPage() {
   };
 
   // Count websites by status
-  const upCount = websites.filter(
+  const upCount = websites?.filter(
     (site) => getWebsiteStatus(site) === "up"
   ).length;
-  const downCount = websites.filter(
+  const downCount = websites?.filter(
     (site) => getWebsiteStatus(site) === "down"
   ).length;
-  const degradedCount = websites.filter(
+  const degradedCount = websites?.filter(
     (site) => getWebsiteStatus(site) === "degraded"
   ).length;
 
@@ -432,7 +440,7 @@ export default function DashboardPage() {
 
                 {/* Services accordion list */}
                 <div className="divide-y">
-                  {websites.length === 0 ? (
+                  {websites?.length === 0 ? (
                     // Loading state
                     Array.from({ length: 3 }).map((_, index) => (
                       <div key={index} className="p-4">
@@ -452,7 +460,7 @@ export default function DashboardPage() {
                       const responseTime = getAverageResponseTime(website);
                       const uptimeTicks = getLast30MinutesTicks(website);
                       const lastChecked =
-                        website.ticks && website.ticks.length > 0
+                        website.ticks && website.ticks?.length > 0
                           ? new Date(
                               website.ticks[0].createdAt
                             ).toLocaleTimeString()
