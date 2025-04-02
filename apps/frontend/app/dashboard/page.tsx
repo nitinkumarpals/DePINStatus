@@ -116,18 +116,16 @@ export default function DashboardPage() {
 
     try {
       const token = await getToken();
-      await axios
-        .post(
-          `${API_BACKEND_URL}/api/v1/website`,
-          { url: newWebsiteUrl },
-          {
-            headers: {
-              Authorization: token,
-              "Content-Type": "application/json",
-            },
-          }
-        )
-        .then(() => refreshWebsites());
+      await axios.post(
+        `${API_BACKEND_URL}/api/v1/website`,
+        { url: newWebsiteUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       // Success - close modal and reset form
       setIsAddingService(false);
@@ -140,7 +138,7 @@ export default function DashboardPage() {
       });
 
       // Refresh the website list
-      // In a real implementation, you might want to call the refreshWebsites function from your hook
+      refreshWebsites();
     } catch (error) {
       console.error("Failed to add website:", error);
       setUrlError("Failed to add website. Please try again.");
@@ -149,18 +147,19 @@ export default function DashboardPage() {
   };
 
   // Filter websites based on search query
-  const filteredWebsites = websites?.filter((website) =>
-    website.url.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredWebsites =
+    websites?.filter((website) =>
+      website.url.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
 
   // Calculate website status based on recent ticks
   const getWebsiteStatus = (website: Website): string => {
-    if (!website.ticks || website.ticks?.length === 0) return "unknown";
+    if (!website.ticks || website.ticks.length === 0) return "unknown";
 
     // Get the last 5 ticks to determine current status
-    const recentTicks = website.ticks?.slice(0, 5);
+    const recentTicks = website.ticks.slice(0, 5);
     const failedTicks = recentTicks.filter(
-      (tick) => tick.status !== "up"
+      (tick) => tick.status === "Bad" || tick.status === "down"
     ).length;
 
     if (failedTicks === 0) return "up";
@@ -170,10 +169,12 @@ export default function DashboardPage() {
 
   // Calculate uptime percentage
   const calculateUptime = (website: Website): string => {
-    if (!website.ticks || website.ticks?.length === 0) return "N/A";
+    if (!website.ticks || website.ticks.length === 0) return "N/A";
 
-    const totalTicks = website.ticks?.length;
-    const upTicks = website.ticks?.filter((tick) => tick.status === "up").length;
+    const totalTicks = website.ticks.length;
+    const upTicks = website.ticks.filter(
+      (tick) => tick.status === "Good" || tick.status === "up"
+    ).length;
 
     const uptimePercentage = (upTicks / totalTicks) * 100;
     return uptimePercentage.toFixed(2) + "%";
@@ -181,9 +182,11 @@ export default function DashboardPage() {
 
   // Get average response time
   const getAverageResponseTime = (website: Website): string => {
-    if (!website.ticks || website.ticks?.length === 0) return "N/A";
+    if (!website.ticks || website.ticks.length === 0) return "N/A";
 
-    const upTicks = website.ticks?.filter((tick) => tick.status === "up");
+    const upTicks = website.ticks.filter(
+      (tick) => tick.status === "Good" || tick.status === "up"
+    );
     if (upTicks.length === 0) return "Error";
 
     const totalLatency = upTicks.reduce(
@@ -195,7 +198,7 @@ export default function DashboardPage() {
 
   // Get the last 30 minutes of ticks (or all if less than 30)
   const getLast30MinutesTicks = (website: Website): boolean[] => {
-    if (!website.ticks || website.ticks?.length === 0) return [];
+    if (!website.ticks || website.ticks.length === 0) return [];
 
     // Sort ticks by createdAt in descending order (newest first)
     const sortedTicks = [...website.ticks].sort(
@@ -209,20 +212,22 @@ export default function DashboardPage() {
       (tick) => new Date(tick.createdAt) >= thirtyMinutesAgo
     );
 
-    // Return up to 10 ticks for display
-    return recentTicks.slice(0, 10).map((tick) => tick.status === "up");
+    // Return up to 10 ticks for display, mapping Good to true and Bad to false
+    return recentTicks
+      .slice(0, 10)
+      .map((tick) => tick.status === "Good" || tick.status === "up");
   };
 
   // Count websites by status
-  const upCount = websites?.filter(
-    (site) => getWebsiteStatus(site) === "up"
-  ).length;
-  const downCount = websites?.filter(
-    (site) => getWebsiteStatus(site) === "down"
-  ).length;
-  const degradedCount = websites?.filter(
-    (site) => getWebsiteStatus(site) === "degraded"
-  ).length;
+  const upCount =
+    websites?.filter((site) => getWebsiteStatus(site) === "up")?.length || 0;
+
+  const downCount =
+    websites?.filter((site) => getWebsiteStatus(site) === "down")?.length || 0;
+
+  const degradedCount =
+    websites?.filter((site) => getWebsiteStatus(site) === "degraded")?.length ||
+    0;
 
   return (
     <div className="flex min-h-screen flex-col">
