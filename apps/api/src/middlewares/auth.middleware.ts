@@ -14,7 +14,6 @@ export const authMiddleware = (
   }
 
   const decoded = jwt.verify(token, process.env.JWT_PUBLIC_KEY ?? "");
-  console.log("decoded", decoded);
   if (!decoded || !decoded.sub) {
     res.status(401).json({
       error: "Unauthorized",
