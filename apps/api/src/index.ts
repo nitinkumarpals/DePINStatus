@@ -1,15 +1,16 @@
+import "dotenv/config";
 import express, { Request, Response } from "express";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import { prisma } from "db/client";
 import { websiteSchema, websiteStatusSchema } from "schema/schema";
-import cors from "cors"
+import cors from "cors";
 const app = express();
 const port = 8080;
-app.use(cors(
-  {
+app.use(
+  cors({
     origin: "http://localhost:3000",
-  }
-))
+  })
+);
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
@@ -109,8 +110,8 @@ app.get(
           userId,
           disabled: false,
         },
-        include:{
-          ticks: true
+        include: {
+          ticks: true,
         },
       });
       res.status(200).json(data);

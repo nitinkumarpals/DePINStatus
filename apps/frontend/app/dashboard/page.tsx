@@ -121,7 +121,7 @@ export default function DashboardPage() {
         { url: newWebsiteUrl },
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: token,
             "Content-Type": "application/json",
           },
         }
