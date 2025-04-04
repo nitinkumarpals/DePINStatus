@@ -1,17 +1,16 @@
-import { prisma } from "../src/index";
-export const seed = async () => {
-  await prisma.user.create({
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+export const main = async () => {
+  const user = await prisma.user.create({
     data: {
-      id: "1",
-      email: "a@b.com",
+      email: "abcde@b.com",
     },
   });
 
-  await prisma.website.create({
+  const website = await prisma.website.create({
     data: {
-      id: "1",
       url: "https://example.com",
-      userId: "1",
+      userId: user.id,
     },
   });
 
@@ -24,8 +23,7 @@ export const seed = async () => {
   });
   await prisma.websiteTick.create({
     data: {
-      id: "1",
-      websiteId: "1",
+      websiteId: website.id,
       status: "Good",
       createdAt: new Date(),
       latency: 100,
@@ -34,8 +32,7 @@ export const seed = async () => {
   });
   await prisma.websiteTick.create({
     data: {
-      id: "1",
-      websiteId: "1",
+      websiteId: website.id,
       status: "Good",
       createdAt: new Date(Date.now() - 1000 * 60 * 10),
       latency: 100,
@@ -44,8 +41,7 @@ export const seed = async () => {
   });
   await prisma.websiteTick.create({
     data: {
-      id: "1",
-      websiteId: "1",
+      websiteId: website.id,
       status: "Bad",
       createdAt: new Date(Date.now() - 1000 * 60 * 20),
       latency: 100,
@@ -53,3 +49,12 @@ export const seed = async () => {
     },
   });
 };
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

@@ -6,6 +6,6 @@ export const authMiddleware = (
   next: NextFunction
 ) => {
   const authHeader = req.headers["authorization"];
-  req.userId = "1";
+  req.userId = "e306d8c9-62cf-4221-b786-66bbf01f9dfc";
   next();
 };
