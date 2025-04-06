@@ -13,7 +13,15 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "common": "*",
+    "db": "*",
     "esbuild": "^0.25.1",
     "ts-node-dev": "^2.0.0"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "ws": "^8.18.1"
   }
 }
