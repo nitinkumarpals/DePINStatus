@@ -1,11 +1,15 @@
 import http from "http";
-import WebSocket,{ Server as WebSocketServer } from "ws";
+import WebSocket, { Server as WebSocketServer } from "ws";
 import { prisma } from "db/client";
 import { randomUUID } from "crypto";
 import { PublicKey } from "@solana/web3.js";
 import nacl, { verify } from "tweetnacl";
 import naclUtil from "tweetnacl-util";
-import { IncomingMessage, OutgoingMessage } from "common/types";
+import {
+  IncomingMessage,
+  OutgoingMessage,
+  SignupIncomingMessage,
+} from "common/types";
 const port = 8081;
 const COST_PER_VALIDATION = 100; // in lamports
 
@@ -55,10 +59,71 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     const idx = availableValidators.findIndex((v) => v.socket === ws);
-    if(idx!==-1) availableValidators.splice(idx,1);
+    if (idx !== -1) availableValidators.splice(idx, 1);
     console.log("Client disconnected!");
   });
 });
+async function signUpHandler(
+  ws: WebSocket,
+  { ip, publicKey, callbackId, signedMessage }: SignupIncomingMessage
+) {
+  try {
+    const validatorDb = await prisma.validator.findFirst({
+      where: { publicKey },
+    });
+    if (validatorDb) {
+      ws.send(
+        JSON.stringify({
+          type: "signup",
+          data: {
+            validatorId: validatorDb.id,
+            callbackId,
+          },
+        })
+      );
+      availableValidators.push({
+        validatorId: validatorDb.id,
+        socket: ws,
+        publicKey: validatorDb.publicKey,
+      });
+      return;
+    }
+    const validator = await prisma.validator.create({
+      data: {
+        ip,
+        publicKey,
+        location: "unknown",
+      },
+    });
+    ws.send(
+      JSON.stringify({
+        type: "signup",
+        data: {
+          validatorId: validator.id,
+          callbackId,
+        },
+      })
+    );
+    availableValidators.push({
+      validatorId: validator.id,
+      socket: ws,
+      publicKey: validator.publicKey,
+    });
+  } catch (error) {
+    console.error("Error in signUpHandler:", error);
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        data: {
+          message: "An error occurred during signup",
+        },
+      })
+    );
+  }
+}
+
+
+
 server.listen(port, () => {
   console.log(`server is listening on port ${port} `);
 });
