@@ -1,3 +1,4 @@
+import "dotenv/config";
 import WebSocket, { Server as WebSocketServer } from "ws";
 import { Keypair } from "@solana/web3.js";
 import nacl from "tweetnacl";
@@ -20,7 +21,7 @@ async function main() {
   const keypair = Keypair.fromSecretKey(
     Uint8Array.from(JSON.parse(process.env.PRIVATE_KEY!))
   );
-
+  console.log(keypair);
   const ws = new WebSocket("ws://localhost:8081");
 
   ws.on("message", async (data: string) => {
