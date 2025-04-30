@@ -33,7 +33,7 @@ export type IncomingMessage =
       data: ValidateIncomingMessage;
     };
 
-export type OutgoingMessage =
+export type OutgoingMessage = 
   | {
       type: "signup";
       data: SignupOutgoingMessage;
@@ -41,4 +41,8 @@ export type OutgoingMessage =
   | {
       type: "validate";
       data: ValidateOutgoingMessage;
+    }
+  | {
+      type: string;  
+      data: any;     
     };
