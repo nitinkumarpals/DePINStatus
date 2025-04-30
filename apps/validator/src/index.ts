@@ -1,4 +1,4 @@
-import "dotenv/config";
+ import "dotenv/config";
 import WebSocket, { Server as WebSocketServer } from "ws";
 import { Keypair } from "@solana/web3.js";
 import nacl from "tweetnacl";
@@ -18,44 +18,123 @@ const CALLBACKS: {
 let validatorId: string | null = null;
 
 async function main() {
-  const keypair = Keypair.fromSecretKey(
-    Uint8Array.from(JSON.parse(process.env.PRIVATE_KEY!))
-  );
-  console.log(keypair);
-  const ws = new WebSocket("ws://localhost:8081");
+  try {
+    let keypair: Keypair;
 
-  ws.on("message", async (data: string) => {
-    const message: OutgoingMessage = JSON.parse(data);
-    if (message.type === "signup") {
-      CALLBACKS[message.data.callbackId]?.(message.data);
-      delete CALLBACKS[message.data.callbackId];
-    } else if (message.type === "validate") {
-      await validateHandler(ws, message.data, keypair);
+    // Try to use existing secret key
+    if (process.env.PRIVATE_KEY) {
+      try {
+        let privateKeyArray: number[];
+        try {
+          privateKeyArray = JSON.parse(process.env.PRIVATE_KEY);
+        } catch (parseError) {
+          console.error("Error parsing PRIVATE_KEY:", parseError);
+          throw new Error("Invalid PRIVATE_KEY format. Must be a JSON-parseable array of numbers.");
+        }
+
+        if (!Array.isArray(privateKeyArray) || privateKeyArray.length !== 64) {
+          throw new Error(`Invalid secret key length. Expected 64 bytes, got ${privateKeyArray?.length}`);
+        }
+
+        const secretKeyUint8Array = Uint8Array.from(privateKeyArray);
+        
+        console.log("Attempting to create keypair from existing secret key");
+        console.log("Secret Key Length:", secretKeyUint8Array.length);
+        console.log("Secret Key First 10 Bytes:", secretKeyUint8Array.slice(0, 10));
+
+        keypair = Keypair.fromSecretKey(secretKeyUint8Array);
+        console.log("Existing Validator Public Key:", keypair.publicKey.toBase58());
+      } catch (keyError) {
+        console.warn("Failed to use existing secret key. Generating new keypair.", keyError);
+        keypair = Keypair.generate();
+      }
+    } else {
+      // No secret key in .env, generate a new one
+      console.log("No existing secret key found. Generating new keypair.");
+      keypair = Keypair.generate();
     }
-  });
 
-  ws.on("open", async () => {
-    const callbackId = randomUUID();
-    CALLBACKS[callbackId] = (data: SignupOutgoingMessage) => {
-      validatorId = data.validatorId;
-    };
-    const signedMessage = await signMessage(
-      `Signed message for ${callbackId}, ${keypair.publicKey}`,
-      keypair
-    );
+    // Save the new secret key to .env file if generation was needed
+    const newSecretKeyArray = Array.from(keypair.secretKey);
+    console.log("New Validator Public Key:", keypair.publicKey.toBase58());
+    console.log("New Secret Key (for .env):", JSON.stringify(newSecretKeyArray));
 
-    ws.send(
-      JSON.stringify({
-        type: "signup",
-        data: {
-          callbackId,
-          ip: "127.0.0.1",
-          publicKey: keypair.publicKey.toBase58(),
-          signedMessage,
-        },
-      })
-    );
-  });
+    const ws = new WebSocket("ws://localhost:8081");
+
+    ws.on("message", async (data: string | Buffer) => {
+      try {
+        // Convert Buffer to string if needed
+        const messageData = Buffer.isBuffer(data) ? data.toString('utf8') : data;
+
+        // Check if data is a valid JSON string
+        if (!messageData || typeof messageData !== 'string') {
+          console.warn('Received invalid message:', messageData);
+          return;
+        }
+
+        // Ignore connection-related messages
+        if (messageData.includes('connection')) {
+          console.log('Received connection-related message:', messageData);
+          return;
+        }
+
+        let message: OutgoingMessage;
+        try {
+          message = JSON.parse(messageData);
+        } catch (parseError) {
+          console.error('Failed to parse WebSocket message:', parseError);
+          console.error('Raw message:', messageData);
+          return;
+        }
+
+        // Validate message structure
+        if (!message || !message.type) {
+          console.warn('Received message with invalid structure:', message);
+          return;
+        }
+
+        switch (message.type) {
+          case "signup":
+            CALLBACKS[message.data.callbackId]?.(message.data);
+            delete CALLBACKS[message.data.callbackId];
+            break;
+          case "validate":
+            await validateHandler(ws, message.data, keypair);
+            break;
+          default:
+            console.warn('Received message with unknown type:', message.type);
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+
+    ws.on("open", async () => {
+      const callbackId = randomUUID();
+      CALLBACKS[callbackId] = (data: SignupOutgoingMessage) => {
+        validatorId = data.validatorId;
+      };
+      const signedMessage = await signMessage(
+        `Signed message for ${callbackId}, ${keypair.publicKey}`,
+        keypair
+      );
+
+      ws.send(
+        JSON.stringify({
+          type: "signup",
+          data: {
+            callbackId,
+            ip: "127.0.0.1",
+            publicKey: keypair.publicKey.toBase58(),
+            signedMessage,
+          },
+        })
+      );
+    });
+  } catch (error) {
+    console.error("Initialization Error:", error);
+    process.exit(1);
+  }
 }
 
 async function validateHandler(
