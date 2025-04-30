@@ -1,4 +1,4 @@
- import "dotenv/config";
+import "dotenv/config";
 import WebSocket, { Server as WebSocketServer } from "ws";
 import { Keypair } from "@solana/web3.js";
 import nacl from "tweetnacl";
@@ -191,5 +191,5 @@ async function signMessage(message: string, keypair: Keypair) {
 
 main();
 
-// Optional polling interval (empty as per original)
+// Optional polling interval 
 setInterval(() => {}, 10000);
